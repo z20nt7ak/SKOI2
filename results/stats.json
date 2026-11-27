@@ -1,0 +1,70 @@
+{
+  "mona-lisa": {
+    "video": "mona-lisa.mp4",
+    "frames": 558,
+    "counts": {
+      "detect": 174,
+      "flow": 384,
+      "lost": 0
+    },
+    "found_percent": 100.0,
+    "processing_fps": 37.86,
+    "video_fps": 29.97002997002997,
+    "size": [
+      640,
+      360
+    ],
+    "seconds": 14.74
+  },
+  "mona-lisa-blur": {
+    "video": "mona-lisa-blur.mp4",
+    "frames": 558,
+    "counts": {
+      "detect": 148,
+      "flow": 391,
+      "lost": 19
+    },
+    "found_percent": 96.59,
+    "processing_fps": 37.16,
+    "video_fps": 29.97002997002997,
+    "size": [
+      640,
+      360
+    ],
+    "seconds": 15.01
+  },
+  "mona-lisa-blur-extra-credit": {
+    "video": "mona-lisa-blur-extra-credit.mp4",
+    "frames": 558,
+    "counts": {
+      "detect": 136,
+      "flow": 394,
+      "lost": 28
+    },
+    "found_percent": 94.98,
+    "processing_fps": 37.27,
+    "video_fps": 29.97002997002997,
+    "size": [
+      640,
+      360
+    ],
+    "seconds": 14.97
+  },
+  "IMG_8805": {
+    "video": "IMG_8805.mp4",
+    "frames": 1186,
+    "counts": {
+      "detect": 1186,
+      "flow": 0,
+      "lost": 0
+    },
+    "found_percent": 100.0,
+    "processing_fps": 9.34,
+    "video_fps": 59.78882345577047,
+    "size": [
+      720,
+      1280
+    ],
+    "seconds": 126.92
+  }
+}
