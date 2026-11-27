@@ -22,7 +22,6 @@ MAX_SIDE = 1280
 
 
 def prepare_template(frame, corners):
-    """Выбираем углы первого кадра и пересчитываем их при уменьшении видео."""
     height, width = frame.shape[:2]
     scale = min(1, MAX_SIDE / max(height, width))
     size = (round(width * scale / 2) * 2, round(height * scale / 2) * 2)
@@ -45,7 +44,6 @@ def prepare_template(frame, corners):
 
 
 def is_valid_box(box, shape):
-    """Отбрасываем ошибочную рамку: вырожденную, огромную или вне изображения."""
     height, width = shape
     if not np.isfinite(box).all() or not cv2.isContourConvex(box):
         return False
@@ -65,7 +63,6 @@ def is_valid_box(box, shape):
 
 class Tracker:
     def __init__(self, frame, corners):
-        """Запоминаем признаки объекта на первом кадре."""
         self.corners = np.float32(corners).reshape(4, 2)
         self.sift = cv2.SIFT_create(nfeatures=4000, contrastThreshold=0.02)
         self.matcher = cv2.BFMatcher(cv2.NORM_L2)
@@ -82,7 +79,6 @@ class Tracker:
         self.points = None
 
     def locate(self, frame):
-        """Главный шаг: SIFT → при необходимости поток → рамка или потеря."""
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         matrix, inliers, coverage = self.detect(gray)
         mode = "detect"
@@ -105,7 +101,6 @@ class Tracker:
         return box, mode
 
     def detect(self, gray):
-        """Сопоставляем детали текущего кадра с деталями первого кадра."""
         keypoints, descriptors = self.sift.detectAndCompute(gray, None)
         if descriptors is None or len(descriptors) < 2:
             return None, 0, 0
@@ -117,8 +112,6 @@ class Tracker:
                 best, second = pair
                 if best.distance < RATIO * second.distance:
                     good.append(best)
-
-        # Сначала берём лучшие совпадения; одну точку кадра используем один раз.
         good.sort(key=lambda match: match.distance)
         used_points = set()
         source, target = [], []
@@ -131,7 +124,6 @@ class Tracker:
         return self.estimate(np.float32(source), np.float32(target), gray.shape)
 
     def estimate(self, source, target, shape):
-        """Вычисляем гомографию по парам точек и проверяем результат."""
         if len(source) < MIN_POINTS:
             return None, 0, 0
         matrix, mask = cv2.findHomography(
@@ -144,13 +136,11 @@ class Tracker:
         if count < 8 or count / len(source) < 0.4:
             return None, 0, 0
 
-        # Совпадения должны охватывать часть объекта, а не одну маленькую деталь.
         hull = cv2.convexHull(source[inliers])
         coverage = cv2.contourArea(hull) / cv2.contourArea(self.corners)
         if coverage < 0.025:
             return None, 0, 0
 
-        # Переводим углы [x, y, 1] матрицей, затем делим X и Y на Z.
         corners_3d = np.column_stack([self.corners, np.ones(4)])
         projected = corners_3d @ matrix.T
         z = projected[:, 2]
@@ -163,7 +153,6 @@ class Tracker:
         return matrix, count, coverage
 
     def follow(self, gray):
-        """Переносим точки предыдущего кадра оптическим потоком."""
         params = dict(winSize=(21, 21), maxLevel=3,
                       criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.01))
         forward, status, error = cv2.calcOpticalFlowPyrLK(
@@ -177,7 +166,6 @@ class Tracker:
         if backward is None or back_status is None:
             return None
 
-        # Оставляем точки, найденные туда и обратно с небольшой ошибкой.
         distance = np.linalg.norm(backward - self.points, axis=2).ravel()
         height, width = gray.shape
         keep = []
@@ -191,8 +179,6 @@ class Tracker:
                 keep.append(i)
         if len(keep) < MIN_POINTS:
             return None
-
-        # Возвращаем старые точки в координаты эталона и оцениваем новую матрицу.
         try:
             inverse = np.linalg.inv(self.homography)
         except np.linalg.LinAlgError:
@@ -211,7 +197,6 @@ class Tracker:
         return matrix
 
     def select_points(self, gray, box):
-        """Готовим точки внутри найденной рамки для следующего кадра."""
         mask = np.zeros_like(gray)
         polygon = np.int32(np.round(box.reshape(4, 2)))
         cv2.fillConvexPoly(mask, polygon, 255)
@@ -220,7 +205,6 @@ class Tracker:
 
 
 def draw(frame, box, label, mode, points=None):
-    """Рисуем рамку, подпись и точки, выбранные для сопровождения."""
     if mode == "detect":
         color = (40, 230, 70)
     else:
@@ -241,7 +225,6 @@ def draw(frame, box, label, mode, points=None):
 
 
 def create_writer(path, fps, size):
-    """Открываем выходной MP4 с доступным кодеком."""
     RESULTS.mkdir(exist_ok=True)
     output = RESULTS / f"{path.stem}_tracked.mp4"
     if output.resolve() == path.resolve():
@@ -255,7 +238,6 @@ def create_writer(path, fps, size):
 
 
 def choose_samples(path, total):
-    """Выбираем номера скриншотов для README; на трекинг это не влияет."""
     if path.name == "mona-lisa-blur.mp4":
         return {9, 28, 29}
     if path.name == "mona-lisa-blur-extra-credit.mp4":
@@ -264,7 +246,6 @@ def choose_samples(path, total):
 
 
 def make_sample(frame, index, fps, mode):
-    """Уменьшаем кадр и подписываем его номер, время и режим трекинга."""
     height, width = frame.shape[:2]
     scale = min(400 / width, 320 / height)
     image = cv2.resize(frame, (round(width * scale), round(height * scale)))
@@ -275,7 +256,6 @@ def make_sample(frame, index, fps, mode):
 
 
 def save_samples(path, samples):
-    """Собираем выбранные скриншоты в коллаж с тремя колонками."""
     if not samples:
         return
     while len(samples) % 3 != 0:
@@ -287,7 +267,6 @@ def save_samples(path, samples):
 
 
 def process(path, label, corners, show):
-    """Открываем видео, обрабатываем каждый кадр и возвращаем статистику."""
     capture = cv2.VideoCapture(str(path))
     writer = None
     try:
@@ -306,8 +285,6 @@ def process(path, label, corners, show):
         samples = []
         index = 0
         started = time.perf_counter()
-
-        # Главный цикл: прочитанный кадр → поиск объекта → рамка → запись.
         while ok:
             frame = cv2.resize(frame, size, interpolation=cv2.INTER_AREA)
             box, mode = tracker.locate(frame)
@@ -343,7 +320,6 @@ def process(path, label, corners, show):
 
 
 def main():
-    """Выбираем видео, начальные углы и подпись; запускаем обработку."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("videos", nargs="*", type=Path, help="Без аргументов: три теста и своё видео")
     parser.add_argument("--label", help="Подпись латиницей")
