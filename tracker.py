@@ -219,12 +219,16 @@ class Tracker:
         self.points = cv2.goodFeaturesToTrack(gray, 200, 0.01, 3, mask=mask, blockSize=3)
 
 
-def draw(frame, box, label, mode):
-    """Рисуем зелёную рамку для SIFT, жёлтую для потока и подпись."""
+def draw(frame, box, label, mode, points=None):
+    """Рисуем рамку, подпись и точки, выбранные для сопровождения."""
     if mode == "detect":
         color = (40, 230, 70)
     else:
         color = (0, 210, 255)
+    if points is not None:
+        for x, y in points.reshape(-1, 2):
+            center = (round(float(x)), round(float(y)))
+            cv2.circle(frame, center, 2, (40, 230, 70), -1, cv2.LINE_AA)
     cv2.polylines(frame, [np.int32(np.round(box))], True, color, 2, cv2.LINE_AA)
     corners = box.reshape(4, 2)
     top_corner = np.argmin(corners[:, 1])
@@ -308,7 +312,7 @@ def process(path, label, corners, show):
             frame = cv2.resize(frame, size, interpolation=cv2.INTER_AREA)
             box, mode = tracker.locate(frame)
             if box is not None:
-                draw(frame, box, label, mode)
+                draw(frame, box, label, mode, tracker.points)
             writer.write(frame)
             counts[mode] += 1
             if index in sample_indices:
